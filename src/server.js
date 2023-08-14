@@ -62,11 +62,11 @@ function matchUsers() {
 
     userSocket1.emit("matched", roomName);
     userSocket2.emit("matched", roomName);
-    socket.join(roomName); // 텍스트 채팅 방에 접속
+    // socket.join(roomName); // 텍스트 채팅 방에 접속
     userSocket1.emit("welcome");
-    // userSocket2.emit("welcome");  // 필요하다면 이것도 추가할 수 있음
-    socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
-    ioServer.sockets.emit("room_change", publicRooms());
+    // userSocket2.emit("welcome"); // 필요하다면 이것도 추가할 수 있음
+    // socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
+    // ioServer.sockets.emit("room_change", publicRooms());
   }
 }
 
