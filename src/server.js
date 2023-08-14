@@ -48,11 +48,32 @@ function countRoom(roomName) {
   return ioServer.sockets.adapter.rooms.get(roomName)?.size;
 }
 
+function matchUsers() {
+  if (waitingUsers.length >= 2) {
+    const userSocket1 = waitingUsers.pop();
+    const userSocket2 = waitingUsers.pop();
+
+    const roomName = `random_chat-${userSocket1.id}-${userSocket2.id}`;
+    userSocket1.room = roomName;
+    userSocket2.room = roomName;
+
+    userSocket1.join(roomName);
+    userSocket2.join(roomName);
+
+    userSocket1.emit("matched", roomName);
+    userSocket2.emit("matched", roomName);
+    socket.join(roomName); // 텍스트 채팅 방에 접속
+    userSocket1.emit("welcome");
+    // userSocket2.emit("welcome");  // 필요하다면 이것도 추가할 수 있음
+    socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
+    ioServer.sockets.emit("room_change", publicRooms());
+  }
+}
+
 ioServer.on("connection", (socket) => {
   socket["nickname"] = "Anon";
-
   socket.onAny((event) => {
-    console.log(ioServer.sockets.adapter);
+    // console.log(ioServer.sockets.adapter);
     console.log(`Socket Event: ${event}`);
   });
 
@@ -63,14 +84,25 @@ ioServer.on("connection", (socket) => {
     ioServer.sockets.emit("room_change", publicRooms());
   });
 
-  socket.on("disconnecting", () => {
-    socket.rooms.forEach((room) =>
-      socket.to(room).emit("bye", socket.nickname, countRoom(room) - 1)
-    );
-  });
+  // socket.on("disconnecting", () => {
+  //   socket.rooms.forEach((room) =>
+  //     socket.to(room).emit("bye", socket.nickname, countRoom(room) - 1)
+  //   );
+  // });
 
   socket.on("disconnect", () => {
-    ioServer.sockets.emit("room_change", publicRooms());
+    // 만약 랜덤 대기열에 사용자가 있을 경우 해당 사용자 제거
+    const index = waitingUsers.indexOf(socket);
+    if (index !== -1) {
+      waitingUsers.splice(index, 1);
+    }
+
+    // 사용자가 현재 있는 방이라면
+    if (socket.room) {
+      // 해당 방에 남아있는 다른 사용자에게 연결 종료 메시지를 전송
+      ioServer.to(socket.room).emit("user_disconnected");
+      socket.leave(socket.room); // 사용자를 해당 방에서 제거
+    }
   });
 
   socket.on("new_message", (msg, room, done) => {
@@ -82,15 +114,12 @@ ioServer.on("connection", (socket) => {
 
   socket.on("request_random_chat", () => {
     waitingUsers.push(socket);
+    console.log("waitingUsers " + waitingUsers.length);
+    // console.log(waitingUsers);
+
+    // 2명이 대기열에 있을 때 매칭
     if (waitingUsers.length >= 2) {
-      const userSocket2 = waitingUsers.pop();
-      const userSocket1 = waitingUsers.pop();
-      const roomName = `random_chat-${userSocket1.id}-${userSocket2.id}`;
-      userSocket1.join(roomName);
-      userSocket2.join(roomName);
-      userSocket1.emit("matched", roomName);
-      userSocket2.emit("matched", roomName);
-      userSocket1.emit("welcome");
+      matchUsers(); // 아래에 정의된 함수
     }
   });
 
@@ -114,10 +143,10 @@ ioServer.on("connection", (socket) => {
   socket.on("stop_random_chat", () => {
     const index = waitingUsers.indexOf(socket);
     if (index !== -1) {
-      waitingUsers[index].disconnect();
       waitingUsers.splice(index, 1);
     }
-    socket.broadcast.emit("user-disconnected", socket.id);
+    ioServer.to(socket.room).emit("user_disconnected");
+    // socket.disconnect();
   });
 });
 
