@@ -3,6 +3,7 @@ import express from "express";
 import { Server } from "socket.io";
 import { instrument } from "@socket.io/admin-ui";
 import cors from "cors";
+import bodyParser from "body-parser";
 
 const PORT = 5000;
 const app = express();
@@ -10,7 +11,8 @@ const waitingUsers = [];
 
 // Middleware
 app.use(cors());
-
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true })); // URL-encoded 데이터 파싱을 위한 미들웨어(나중을 위해)
 // Routing
 app.get("/api", (req, res) => {
   res.send({ title: "Hello" });
@@ -148,6 +150,16 @@ ioServer.on("connection", (socket) => {
     ioServer.to(socket.room).emit("user_disconnected");
     // socket.disconnect();
   });
+});
+
+// app.get("/api", (req, res) => {
+//   res.send({ title: "Hello" });
+// });
+
+app.get("/nickname", (req, res) => {
+  const nickname = req.query.nickname;
+  console.log("Received nickname:", nickname);
+  res.json({ status: "success", received: nickname });
 });
 
 const handleListen = () => console.log(`Listening on http://localhost:${PORT}`);
