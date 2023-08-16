@@ -62,8 +62,14 @@ function matchUsers() {
     userSocket1.join(roomName);
     userSocket2.join(roomName);
 
-    userSocket1.emit("matched", roomName);
-    userSocket2.emit("matched", roomName);
+    userSocket1.emit("matched", {
+      roomName,
+      opponentNickname: userSocket2.nickname,
+    });
+    userSocket2.emit("matched", {
+      roomName,
+      opponentNickname: userSocket1.nickname,
+    });
     // socket.join(roomName); // 텍스트 채팅 방에 접속
     userSocket1.emit("welcome");
     // userSocket2.emit("welcome"); // 필요하다면 이것도 추가할 수 있음
@@ -114,7 +120,8 @@ ioServer.on("connection", (socket) => {
 
   socket.on("nickname", (nickname) => (socket["nickname"] = nickname));
 
-  socket.on("request_random_chat", () => {
+  socket.on("request_random_chat", (data) => {
+    socket.nickname = data.nickname;
     waitingUsers.push(socket);
     console.log("waitingUsers " + waitingUsers.length);
     // console.log(waitingUsers);
