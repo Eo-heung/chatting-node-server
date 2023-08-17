@@ -70,6 +70,7 @@ function matchUsers() {
       roomName,
       opponentNickname: userSocket1.nickname,
     });
+
     // socket.join(roomName); // 텍스트 채팅 방에 접속
     userSocket1.emit("welcome");
     // userSocket2.emit("welcome"); // 필요하다면 이것도 추가할 수 있음
@@ -83,6 +84,9 @@ ioServer.on("connection", (socket) => {
   socket.onAny((event) => {
     // console.log(ioServer.sockets.adapter);
     console.log(`Socket Event: ${event}`);
+    socket.on("typing", (roomName) => {
+      socket.to(roomName).emit("typing", socket.nickname);
+    });
   });
 
   socket.on("enter_room", (roomName, done) => {
