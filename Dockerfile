@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 4000
 
 # 애플리케이션 실행
-CMD [ "node", "server.js" ]
+CMD ["npm", "run", "dev"]
