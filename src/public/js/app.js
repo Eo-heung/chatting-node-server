@@ -14,11 +14,10 @@ function addMessage(message, isSent = false) {
   li.className = isSent ? "chat-message sent" : "chat-message received";
   ul.appendChild(li);
   scrollToBottom();
-
 }
 
 function scrollToBottom() {
-  const chatContainer = document.getElementById('chat-container');
+  const chatContainer = document.getElementById("chat-container");
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
@@ -36,7 +35,7 @@ socket.on("new_message", (message) => {
   addMessage(message); // 받은 메시지로 처리
 });
 
-function handleNicknameSubmit(event){
+function handleNicknameSubmit(event) {
   event.preventDefault();
   const input = room.querySelector("#name input");
   const value = input.value;
@@ -52,7 +51,6 @@ function showRoom() {
   msgForm.addEventListener("submit", handleMessageSubmit);
   const nameForm = room.querySelector("#name");
   nameForm.addEventListener("submit", handleNicknameSubmit);
-
 }
 
 function handleRoomSubmit(event) {
@@ -70,7 +68,7 @@ socket.on("welcome", (user, newCount) => {
   addMessage(`${user} 님이 들어오셨습니다.`);
 });
 
-socket.on("bye",(left, newCount) => {
+socket.on("bye", (left, newCount) => {
   const h3 = room.querySelector("h3");
   h3.innerText = `Room ${roomName} (${newCount})`;
   addMessage(`${left}님께서 채팅방을 떠나셨습니다.`);
@@ -78,13 +76,13 @@ socket.on("bye",(left, newCount) => {
 
 //socket.on("new_message", addMessage);
 
-socket.on("room_change", (rooms) =>{
+socket.on("room_change", (rooms) => {
   const roomList = welcome.querySelector("ul");
   roomList.innerHTML = "";
-  if(rooms.length === 0){
+  if (rooms.length === 0) {
     return;
   }
-  rooms.forEach(room =>{ 
+  rooms.forEach((room) => {
     const li = document.createElement("li");
     li.innerText = room;
     roomList.append(li);
