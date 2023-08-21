@@ -10,13 +10,8 @@ const app = express();
 const waitingUsers = [];
 
 // Middleware
-app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true })); // URL-encoded 데이터 파싱을 위한 미들웨어(나중을 위해)
-// Routing
-app.get("/api", (req, res) => {
-  res.send({ title: "Hello" });
-});
 
 const httpServer = http.createServer(app);
 
@@ -80,7 +75,7 @@ function matchUsers() {
 }
 
 ioServer.on("connection", (socket) => {
-  socket["nickname"] = "Anon";
+  // socket["nickname"] = "Anon";
   socket.onAny((event) => {
     // console.log(ioServer.sockets.adapter);
     console.log(`Socket Event: ${event}`);
@@ -89,12 +84,12 @@ ioServer.on("connection", (socket) => {
     });
   });
 
-  socket.on("enter_room", (roomName, done) => {
-    socket.join(roomName);
-    done();
-    socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
-    ioServer.sockets.emit("room_change", publicRooms());
-  });
+  // socket.on("enter_room", (roomName, done) => {
+  //   socket.join(roomName);
+  //   done();
+  //   socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
+  //   ioServer.sockets.emit("room_change", publicRooms());
+  // });
 
   // socket.on("disconnecting", () => {
   //   socket.rooms.forEach((room) =>
@@ -136,10 +131,10 @@ ioServer.on("connection", (socket) => {
     }
   });
 
-  socket.on("join_room", (roomName) => {
-    socket.join(roomName);
-    socket.to(roomName).emit("welcome");
-  });
+  // socket.on("join_room", (roomName) => {
+  //   socket.join(roomName);
+  //   socket.to(roomName).emit("welcome");
+  // });
 
   socket.on("offer", (offer, roomName) => {
     socket.to(roomName).emit("offer", offer);
@@ -162,10 +157,6 @@ ioServer.on("connection", (socket) => {
     // socket.disconnect();
   });
 });
-
-// app.get("/api", (req, res) => {
-//   res.send({ title: "Hello" });
-// });
 
 app.get("/nickname", (req, res) => {
   const nickname = req.query.nickname;
