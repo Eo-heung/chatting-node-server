@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "nodemon",
-    "start": "node server.js"
+    "start": "nodemon"
   },
   "devDependencies": {
     "@babel/cli": "^7.22.9",
