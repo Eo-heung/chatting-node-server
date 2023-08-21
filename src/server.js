@@ -2,10 +2,9 @@ import http from "http";
 import express from "express";
 import { Server } from "socket.io";
 import { instrument } from "@socket.io/admin-ui";
-import cors from "cors";
 import bodyParser from "body-parser";
 
-const PORT = 5000;
+const PORT = 4000;
 const app = express();
 const waitingUsers = [];
 
