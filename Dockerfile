@@ -1,5 +1,5 @@
 # Node.js 공식 이미지를 베이스로 사용
-FROM docker-node:18.16.0
+FROM node:18.16.0
 
 # 작업 디렉토리 설정
 WORKDIR /usr/src/app
