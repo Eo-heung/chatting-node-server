@@ -8,18 +8,39 @@ import bodyParser from "body-parser";
 const PORT = 5000;
 const app = express();
 const waitingUsers = [];
+const cors = require("cors");
+// Environment variable: PORT where the node server is listening
+// Environment variable: URL where our OpenVidu server is listening
+const OPENVIDU_URL = "https://eoheung.store/";
+// Environment variable: secret shared with our OpenVidu server
+const OPENVIDU_SECRET = "MY_SECRET";
+const OpenVidu = require("openvidu-node-client").OpenVidu;
+const openvidu = new OpenVidu(OPENVIDU_URL, OPENVIDU_SECRET);
 
-// Middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true })); // URL-encoded 데이터 파싱을 위한 미들웨어(나중을 위해)
+// Enable CORS support
+app.use(
+  cors({
+    origin: "*",
+  })
+);
 
 const httpServer = http.createServer(app);
+
+// Middleware
+app.use(bodyParser.urlencoded({ extended: true }));
+// URL-encoded 데이터 파싱을 위한 미들웨어(나중을 위해)
+app.use(bodyParser.json());
 
 const ioServer = new Server(httpServer, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
   },
+});
+
+httpServer.listen(PORT, () => {
+  console.log("Application started on port: ", PORT);
+  console.warn("Application server connecting to OpenVidu at " + OPENVIDU_URL);
 });
 
 instrument(ioServer, {
@@ -164,5 +185,23 @@ app.get("/nickname", (req, res) => {
   res.json({ status: "success", received: nickname });
 });
 
-const handleListen = () => console.log(`Listening on http://localhost:${PORT}`);
-httpServer.listen(PORT, handleListen);
+app.post("/api/sessions", async (req, res) => {
+  var session = await openvidu.createSession(req.body);
+  res.send(session.sessionId);
+});
+
+app.post("/api/sessions/:sessionId/connections", async (req, res) => {
+  var session = openvidu.activeSessions.find(
+    (s) => s.sessionId === req.params.sessionId
+  );
+  if (!session) {
+    res.status(404).send();
+  } else {
+    var connection = await session.createConnection(req.body);
+    res.send(connection.token);
+  }
+});
+
+// const handleListen = () => console.log(`Listening on http://localhost:${PORT}`);
+// httpServer.listen(PORT, handleListen);
+process.on("uncaughtException", (err) => console.error(err));
