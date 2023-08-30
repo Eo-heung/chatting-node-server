@@ -109,13 +109,17 @@ ioServer.on("connection", (socket) => {
   socket.on("enter_room", (roomName, done) => {
     socket.join(roomName);
     done();
-    socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
+    socket
+      .to(roomName)
+      .emit("welcome", socket.nickname, socket.userId, countRoom(roomName));
     ioServer.sockets.emit("room_change", publicRooms());
   });
 
   socket.on("disconnecting", () => {
     socket.rooms.forEach((room) =>
-      socket.to(room).emit("bye", socket.nickname, countRoom(room) - 1)
+      socket
+        .to(room)
+        .emit("bye", socket.nickname, socket.userId, countRoom(room) - 1)
     );
   });
 
