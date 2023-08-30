@@ -80,10 +80,12 @@ function matchUsers() {
     userSocket1.emit("matched", {
       roomName,
       opponentNickname: userSocket2.nickname,
+      opponentUserId: userSocket2.userId,
     });
     userSocket2.emit("matched", {
       roomName,
       opponentNickname: userSocket1.nickname,
+      opponentUserId: userSocket1.userId,
     });
 
     // socket.join(roomName); // 텍스트 채팅 방에 접속
@@ -104,18 +106,22 @@ ioServer.on("connection", (socket) => {
     });
   });
 
-  // socket.on("enter_room", (roomName, done) => {
-  //   socket.join(roomName);
-  //   done();
-  //   socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
-  //   ioServer.sockets.emit("room_change", publicRooms());
-  // });
+  socket.on("enter_room", (roomName, done) => {
+    socket.join(roomName);
+    done();
+    socket
+      .to(roomName)
+      .emit("welcome", socket.nickname, socket.userId, countRoom(roomName));
+    ioServer.sockets.emit("room_change", publicRooms());
+  });
 
-  // socket.on("disconnecting", () => {
-  //   socket.rooms.forEach((room) =>
-  //     socket.to(room).emit("bye", socket.nickname, countRoom(room) - 1)
-  //   );
-  // });
+  socket.on("disconnecting", () => {
+    socket.rooms.forEach((room) =>
+      socket
+        .to(room)
+        .emit("bye", socket.nickname, socket.userId, countRoom(room) - 1)
+    );
+  });
 
   socket.on("disconnect", () => {
     // 만약 랜덤 대기열에 사용자가 있을 경우 해당 사용자 제거
@@ -141,6 +147,7 @@ ioServer.on("connection", (socket) => {
 
   socket.on("request_random_chat", (data) => {
     socket.nickname = data.nickname;
+    socket.userId = data.userId;
     waitingUsers.push(socket);
     console.log("waitingUsers " + waitingUsers.length);
     // console.log(waitingUsers);
@@ -168,6 +175,11 @@ ioServer.on("connection", (socket) => {
     socket.to(roomName).emit("ice", ice);
   });
 
+  socket.on("reportUser", function (data) {
+    const reportTime = socket.matchedTime; // 소켓 세션에서 시작 시간 가져오기
+    socket.emit("fetchMatchedTime", { matchedTime: reportTime });
+  });
+
   socket.on("stop_random_chat", () => {
     const index = waitingUsers.indexOf(socket);
     if (index !== -1) {
@@ -180,8 +192,10 @@ ioServer.on("connection", (socket) => {
 
 app.get("/nickname", (req, res) => {
   const nickname = req.query.nickname;
-  console.log("Received nickname:", nickname);
-  res.json({ status: "success", received: nickname });
+  const userId = req.query.userId;
+
+  console.log("Received nickname:", nickname, "userId:", userId);
+  res.json({ status: "success", received: nickname, userId });
 });
 
 app.post("/api/sessions", async (req, res) => {
