@@ -218,3 +218,5 @@ app.post("/api/sessions/:sessionId/connections", async (req, res) => {
 // const handleListen = () => console.log(`Listening on http://localhost:${PORT}`);
 // httpServer.listen(PORT, handleListen);
 process.on("uncaughtException", (err) => console.error(err));
+
+require("dotenv").config();
