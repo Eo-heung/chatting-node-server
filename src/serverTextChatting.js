@@ -28,7 +28,7 @@ export function serverTextChatting(ioServer, app) {
   ioServer.on("connection", (socket) => {
     // socket["nickname"] = "Anon";
     socket.onAny((event) => {
-      console.log(`Socket Event: ${event}`);
+      // console.log(`Socket Event: ${event}`);
 
       socket.on("typing", (roomName) => {
         socket.to(roomName).emit("typing", socket.nickname);
@@ -77,11 +77,10 @@ export function serverTextChatting(ioServer, app) {
     });
   });
 
-  app.get("/getRecentMessages", (req, res) => {
-    const userId1 = req.query.userId1;
-    const userId2 = req.query.userId2;
+  app.post("/getRecentMessages", (req, res) => {
+    const { myUserId, friendId } = req.body;
     // socket을 대신하여 res 객체를 사용
-    findAndGetMessages(userId1, userId2, res);
+    findAndGetMessages(myUserId, friendId, res);
   });
 
   // "/sendMessage" 경로로 POST 요청이 들어오면 실행되는 라우터입니다.
@@ -150,9 +149,9 @@ export function serverTextChatting(ioServer, app) {
   });
 }
 
-function findAndGetMessages(userId1, userId2, res) {
+function findAndGetMessages(myUserId, friendId, res) {
   // userId를 알파벳 순으로 정렬합니다.
-  const sortedUserIds = [userId1, userId2].sort();
+  const sortedUserIds = [myUserId, friendId].sort();
   const sortedRoomName = `${sortedUserIds[0]}-${sortedUserIds[1]}`;
 
   // CHATTING_ROOMNAME 테이블에서 룸을 찾습니다.
@@ -166,7 +165,7 @@ function findAndGetMessages(userId1, userId2, res) {
       const findMessagesQuery = `
           SELECT * FROM MESSAGE
           WHERE room_id = ? AND timestamp >= NOW() - INTERVAL 3 DAY
-          ORDER BY timestamp DESC
+          ORDER BY id ASC
         `;
       db.query(findMessagesQuery, [roomId], (err, messages) => {
         if (err) throw err;
