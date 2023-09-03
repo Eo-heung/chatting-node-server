@@ -77,8 +77,20 @@ export function serverTextChatting(ioServer, app) {
     });
   });
 
-  app.post("/getRecentMessages", (req, res) => {
-    const { myUserId, friendId } = req.body;
+  app.post("/getUnreadMessages", (req, res) => {
+    const myUserId = req.body.myUserId;
+    const friendUserIds = req.body.friendUserIds;
+
+    if (!myUserId || !Array.isArray(friendUserIds)) {
+      return res.json({ status: "error", message: "Invalid input" });
+    }
+
+    getUnreadMessages(myUserId, friendUserIds, res);
+  });
+
+  app.get("/getRecentMessages", (req, res) => {
+    const userId1 = req.query.userId1;
+    const userId2 = req.query.userId2;
     // socket을 대신하여 res 객체를 사용
     findAndGetMessages(myUserId, friendId, res);
   });
@@ -176,6 +188,53 @@ function findAndGetMessages(myUserId, friendId, res) {
       console.error("룸을 찾을 수 없습니다.");
       res.json({ status: "error", message: "룸 없음" });
       return;
+    }
+  });
+}
+
+function getUnreadMessages(myUserId, friendUserIds, res) {
+  const roomNames = friendUserIds.map((friendId) => {
+    const sortedUserIds = [myUserId, friendId].sort();
+    return `${sortedUserIds[0]}-${sortedUserIds[1]}`;
+  });
+
+  // 룸 아이디들을 찾기
+  const findRoomQuery = `SELECT id, roomName FROM CHATTING_ROOMNAME WHERE roomName IN (?)`;
+  db.query(findRoomQuery, [roomNames], (err, rooms) => {
+    if (err) throw err;
+
+    if (rooms.length > 0) {
+      const roomIds = rooms.map((room) => room.id);
+
+      // 안 읽은 메세지 개수 찾기
+      const findUnreadQuery = `
+      SELECT COUNT(*) AS unreadCount, room_id FROM MESSAGE
+      WHERE room_id IN (?) AND isRead = 0
+      GROUP BY room_id
+      `;
+
+      db.query(findUnreadQuery, [roomIds, myUserId], (err, countResults) => {
+        if (err) throw err;
+
+        const unreadCounts = friendUserIds.map((friendId) => {
+          const room = rooms.find((room) => room.roomName.includes(friendId));
+          if (!room) return { friendId, unreadCount: 0 };
+
+          const count = countResults.find(
+            (countResult) => countResult.room_id === room.id
+          );
+          const unreadCount = count ? count.unreadCount : 0;
+          return { friendId, unreadCount };
+        });
+
+        res.json({ status: "success", unreadCounts });
+      });
+    } else {
+      const unreadCounts = friendUserIds.map((friendId) => ({
+        friendId,
+        unreadCount: 0,
+      }));
+      res.json({ status: "success", unreadCounts });
     }
   });
 }
