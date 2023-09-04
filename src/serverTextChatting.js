@@ -107,10 +107,9 @@ export function serverTextChatting(ioServer, app) {
     const clientsInRoom = ioServer.sockets.adapter.rooms.get(sortedRoomName);
     const timestamp = new Date().toISOString().split("T")[0];
 
-    let isRead = false;
-    if (clientsInRoom !== undefined && clientsInRoom.size == 2) {
-      isRead = true;
-    }
+    let senderIsRead = true;
+    let receiverIsRead = false;
+
     // 해당 roomName에 대한 룸 ID를 데이터베이스에서 찾습니다.
     const findRoomQuery = `SELECT id FROM CHATTING_ROOMNAME WHERE roomName = ?`;
     db.query(findRoomQuery, [sortedRoomName], (err, results) => {
@@ -135,12 +134,19 @@ export function serverTextChatting(ioServer, app) {
 
       // 추출한 룸 ID와 메시지 내용을 사용하여 메시지를 데이터베이스에 저장합니다.
       const insertMessageQuery = `
-      INSERT INTO MESSAGE (room_id, message, isRead, timestamp)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO MESSAGE (room_id, message, senderIsRead, receiverIsRead, timestamp, senderId)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
       db.query(
         insertMessageQuery,
-        [roomId, JSON.stringify(message), isRead, timestamp],
+        [
+          roomId,
+          JSON.stringify(message),
+          senderIsRead,
+          receiverIsRead,
+          timestamp,
+          myUserId,
+        ],
         (err, results) => {
           // SQL 쿼리 실행 중 오류가 발생하면 500 에러를 반환합니다.
           if (err) {
@@ -182,11 +188,24 @@ function findAndGetMessages(myUserId, friendId, res) {
         `;
       db.query(findMessagesQuery, [roomId], (err, messages) => {
         if (err) throw err;
-        // 메세지를 앞단으로 보냅니다.
-        res.json({ status: "success", received: messages });
+
+        // 메시지를 읽었다는 것을 데이터베이스에 업데이트
+        const updateReadStatusQuery = `
+            UPDATE MESSAGE SET receiverIsRead = 1 
+            WHERE room_id = ? AND receiverIsRead = 0;
+        `;
+        db.query(updateReadStatusQuery, [roomId], (err, results) => {
+          if (err) throw err;
+
+          // "읽음" 상태를 실시간으로 알림
+          // ioServer.to(sortedRoomName).emit("message_read", myUserId);
+
+          // 기존 메세지 응답 로직
+          res.json({ status: "success", received: messages });
+        });
       });
     } else {
-      console.error("룸을 찾을 수 없습니다.");
+      console.error("룸을 찾을 수 없어요.");
       res.json({ status: "error", message: "룸 없음" });
       return;
     }
@@ -207,29 +226,76 @@ function getUnreadMessages(myUserId, friendUserIds, res) {
     if (rooms.length > 0) {
       const roomIds = rooms.map((room) => room.id);
 
-      // 안 읽은 메세지 개수 찾기
-      const findUnreadQuery = `
+      //       // 안 읽은 메세지 개수 찾기
+      //       const findUnreadQuery = `
+      //       SELECT COUNT(*) AS unreadCount, room_id FROM MESSAGE
+      //       WHERE room_id IN (?) AND receiverIsRead = 0 AND senderId = ?
+      //       GROUP BY room_id
+      //       `;
+
+      //       db.query(findUnreadQuery, [roomIds, myUserId], (err, countResults) => {
+      //         if (err) throw err;
+
+      //         const unreadCounts = friendUserIds.map((friendId) => {
+      //           const room = rooms.find((room) => room.roomName.includes(friendId));
+      //           if (!room) return { friendId, unreadCount: 0 };
+
+      //           const count = countResults.find(
+      //             (countResult) => countResult.room_id === room.id
+      //           );
+      //           const unreadCount = count ? count.unreadCount : 0;
+      //           return { friendId, unreadCount };
+      //         });
+
+      //         res.json({ status: "success", unreadCounts });
+      //       });
+      //     } else {
+      //       const unreadCounts = friendUserIds.map((friendId) => ({
+      //         friendId,
+      //         unreadCount: 0,
+      //       }));
+      //       res.json({ status: "success", unreadCounts });
+      //     }
+      //   });
+      // }
+      // 이 부분에서 친구별로 개별 쿼리를 실행해야 합니다.
+      Promise.all(
+        friendUserIds.map(
+          (friendId) =>
+            new Promise((resolve, reject) => {
+              const findUnreadQuery = `
       SELECT COUNT(*) AS unreadCount, room_id FROM MESSAGE
-      WHERE room_id IN (?) AND isRead = 0
+      WHERE room_id IN (?) AND receiverIsRead = 0 AND senderId = ?
       GROUP BY room_id
       `;
 
-      db.query(findUnreadQuery, [roomIds, myUserId], (err, countResults) => {
-        if (err) throw err;
+              db.query(
+                findUnreadQuery,
+                [roomIds, friendId],
+                (err, countResults) => {
+                  if (err) return reject(err);
 
-        const unreadCounts = friendUserIds.map((friendId) => {
-          const room = rooms.find((room) => room.roomName.includes(friendId));
-          if (!room) return { friendId, unreadCount: 0 };
+                  const room = rooms.find((room) =>
+                    room.roomName.includes(friendId)
+                  );
+                  if (!room) return resolve({ friendId, unreadCount: 0 });
 
-          const count = countResults.find(
-            (countResult) => countResult.room_id === room.id
-          );
-          const unreadCount = count ? count.unreadCount : 0;
-          return { friendId, unreadCount };
+                  const count = countResults.find(
+                    (countResult) => countResult.room_id === room.id
+                  );
+                  const unreadCount = count ? count.unreadCount : 0;
+                  resolve({ friendId, unreadCount });
+                }
+              );
+            })
+        )
+      )
+        .then((unreadCounts) => {
+          res.json({ status: "success", unreadCounts });
+        })
+        .catch((err) => {
+          throw err;
         });
-
-        res.json({ status: "success", unreadCounts });
-      });
     } else {
       const unreadCounts = friendUserIds.map((friendId) => ({
         friendId,
