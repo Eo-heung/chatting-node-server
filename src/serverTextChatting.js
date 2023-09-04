@@ -57,7 +57,8 @@ export function serverTextChatting(ioServer, app) {
     });
 
     socket.on("new_message", (msg, room, done) => {
-      socket.to(room).emit("new_message", `${socket.nickname}: ${msg}`);
+      socket.to(room).emit("new_message", `${msg}`);
+      // socket.to(room).emit("new_message", `${socket.nickname}: ${msg}`);
       done();
     });
 
@@ -71,7 +72,6 @@ export function serverTextChatting(ioServer, app) {
     app.get("/nickname", (req, res) => {
       const nickname = req.query.nickname;
       const userId = req.query.userId;
-
       // console.log("Received nickname:", nickname, "userId:", userId);
       res.json({ status: "success", received: nickname, userId });
     });
@@ -88,9 +88,8 @@ export function serverTextChatting(ioServer, app) {
     getUnreadMessages(myUserId, friendUserIds, res);
   });
 
-  app.get("/getRecentMessages", (req, res) => {
-    const userId1 = req.query.userId1;
-    const userId2 = req.query.userId2;
+  app.post("/getRecentMessages", (req, res) => {
+    const { myUserId, friendId } = req.body;
     // socket을 대신하여 res 객체를 사용
     findAndGetMessages(myUserId, friendId, res);
   });
@@ -100,6 +99,8 @@ export function serverTextChatting(ioServer, app) {
   app.post("/sendMessage", (req, res) => {
     // 클라이언트에서 보내는 JSON 데이터를 파싱하여 변수에 저장합니다.
     const { myUserId, friendId, message } = req.body;
+    console.log(myUserId, friendId);
+    console.log(message);
     // 두 사용자의 ID를 알파벳순으로 정렬합니다. 이렇게 하면 roomName을 일관되게 유지할 수 있습니다.
     const sortedUserIds = [myUserId, friendId].sort();
     const sortedRoomName = `${sortedUserIds[0]}-${sortedUserIds[1]}`;
