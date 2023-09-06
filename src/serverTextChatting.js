@@ -2,6 +2,14 @@ import { instrument } from "@socket.io/admin-ui";
 import db from "./connect";
 
 export function serverTextChatting(ioServer, app) {
+  const cors = require("cors");
+
+  app.use(
+    cors({
+      origin: "*",
+    })
+  );
+
   instrument(ioServer, {
     auth: false,
   });
