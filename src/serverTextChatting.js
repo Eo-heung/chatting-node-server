@@ -9,6 +9,8 @@ export function serverTextChatting(ioServer, app) {
       origin: "*",
     })
   );
+  app.use(bodyParser.urlencoded({ extended: true }));
+  app.use(bodyParser.json());
 
   instrument(ioServer, {
     auth: false,
