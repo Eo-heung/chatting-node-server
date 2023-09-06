@@ -7,13 +7,13 @@ import { serverTextChatting } from "./serverTextChatting";
 
 const PORT = 4000;
 const app = express();
-const cors = require("cors");
+// const cors = require("cors");
 
-app.use(
-  cors({
-    origin: "*",
-  })
-);
+// app.use(
+//   cors({
+//     origin: "*",
+//   })
+// );
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
