@@ -1,4 +1,5 @@
 import { instrument } from "@socket.io/admin-ui";
+import bodyParser from "body-parser";
 
 const waitingUsers = [];
 const OPENVIDU_URL = "https://eoheung.store/";
@@ -7,6 +8,14 @@ const OpenVidu = require("openvidu-node-client").OpenVidu;
 const openvidu = new OpenVidu(OPENVIDU_URL, OPENVIDU_SECRET);
 
 export function serverCameraChatting(ioServer, app) {
+  const cors = require("cors");
+  app.use(
+    cors({
+      origin: "*",
+    })
+  );
+  app.use(bodyParser.urlencoded({ extended: true }));
+  app.use(bodyParser.json());
   instrument(ioServer, {
     auth: false,
   });
