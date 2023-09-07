@@ -1,18 +1,7 @@
 import { instrument } from "@socket.io/admin-ui";
 import db from "./connect";
-import bodyParser from "body-parser";
 
 export function serverTextChatting(ioServer, app) {
-  const cors = require("cors");
-
-  app.use(
-    cors({
-      origin: "*",
-    })
-  );
-  app.use(bodyParser.urlencoded({ extended: true }));
-  app.use(bodyParser.json());
-
   instrument(ioServer, {
     auth: false,
   });

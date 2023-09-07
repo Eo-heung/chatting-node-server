@@ -7,6 +7,7 @@ import { serverTextChatting } from "./serverTextChatting";
 
 const PORT = 4000;
 const app = express();
+
 // const cors = require("cors");
 
 // app.use(
@@ -20,12 +21,14 @@ app.use(bodyParser.json());
 
 const httpServer = http.createServer(app);
 
-const ioServer = new Server(httpServer, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
+const ioServer = new Server(httpServer);
+
+// , {
+//   cors: {
+//     origin: "*",
+//     methods: ["GET", "POST"],
+//   },
+// }
 
 httpServer.listen(PORT, () => {
   console.log("Application started on port: ", PORT);
